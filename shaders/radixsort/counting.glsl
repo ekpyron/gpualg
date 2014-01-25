@@ -12,12 +12,28 @@ layout (std430, binding = 1) buffer PrefixSum
 	uint prefixsum[];
 };
 
-layout (std430, binding = 2) buffer BlockSum
+layout (std430, binding = 2) buffer BlockSum0
 {
-	uvec4 blocksum[];
+	uint blocksum0[];
+};
+
+layout (std430, binding = 3) buffer BlockSum1
+{
+	uint blocksum1[];
+};
+
+layout (std430, binding = 4) buffer BlockSum2
+{
+	uint blocksum2[];
+};
+
+layout (std430, binding = 5) buffer BlockSum3
+{
+	uint blocksum3[];
 };
 
 shared uvec4 mask[256];
+shared uvec4 sblocksum;
 
 const int n = 256;
 
@@ -61,7 +77,18 @@ void main (void)
 	
 	if (lid == 0)
 	{
-		blocksum[gl_WorkGroupID.x] = mask[n - 1];
+		uvec4 tmp;
+		tmp.x = 0;
+		tmp.y = mask[n - 1].x;
+		tmp.z = tmp.y + mask[n - 1].y;
+		tmp.w = tmp.z + mask[n - 1].z;
+		sblocksum = tmp;
+
+		blocksum0[gl_WorkGroupID.x] = mask[n - 1].x;
+		blocksum1[gl_WorkGroupID.x] = mask[n - 1].y;
+		blocksum2[gl_WorkGroupID.x] = mask[n - 1].z;
+		blocksum3[gl_WorkGroupID.x] = mask[n - 1].w;
+
 		mask[n - 1] = uvec4 (0, 0, 0, 0);
 	}
 	
@@ -85,21 +112,11 @@ void main (void)
 	
 	barrier ();
 	memoryBarrierShared ();
-	
-//	prefixsum[2 * gid] = mask[2 * lid][bits1] + blocksum[bits1];
-//	prefixsum[2 * gid + 1] = mask[2 * lid + 1][bits2] + blocksum[bits2];
 
-	uvec4 bs;
-	uvec4 tmp = blocksum[gl_WorkGroupID.x];
-	bs.x = 0;
-	bs.y = tmp.x;
-	bs.z = tmp.x + tmp.y;
-	bs.w = tmp.x + tmp.y + tmp.z;
-
-	prefixsum[2 * gid] = mask[2 * lid][bits1] + bs[bits1];
-	prefixsum[2 * gid + 1] = mask[2 * lid + 1][bits2] + bs[bits2];
+	prefixsum[2 * gid] = mask[2 * lid][bits1] + sblocksum[bits1];
+	prefixsum[2 * gid + 1] = mask[2 * lid + 1][bits2] + sblocksum[bits2];
 	
-	data[mask[2 * lid][bits1] + bs[bits1]] = data1;
-	data[mask[2 * lid + 1][bits2] + bs[bits2]] = data2;
+	data[mask[2 * lid][bits1] + sblocksum[bits1]] = data1;
+	data[mask[2 * lid + 1][bits2] + sblocksum[bits2]] = data2;
 
 }
