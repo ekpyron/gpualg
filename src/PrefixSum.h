@@ -1,15 +1,15 @@
 #ifndef PREFIXSUM_H
 #define PREFIXSUM_H
 
-#include <oglp/oglp.h>
+#include "common.h"
+#include "GpuAlg.h"
 
-class PrefixSum
+class PrefixSum : public GpuAlg
 {
 public:
 	 PrefixSum (void);
-	 ~PrefixSum (void);
-	 void Run (void);
-	 void Frame (void);
+	 virtual ~PrefixSum (void);
+	 virtual void Run (void);
 private:
 	 gl::Program blockscan;
 	 gl::Program addblocksum;

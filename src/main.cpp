@@ -1,12 +1,11 @@
-#include <iostream>
-#include <oglp/oglp.h>
-#include <GLFW/glfw3.h>
+#include "GpuAlg.h"
 #include "PrefixSum.h"
+#include "RadixSort.h"
 
 GLFWwindow *window = NULL;
-PrefixSum *prefixsum = NULL;
+GpuAlg *gpualg = NULL;
 
-void initialize (void)
+void initialize (int &argc, char **&argv)
 {
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -14,25 +13,36 @@ void initialize (void)
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint (GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
-    window = glfwCreateWindow (1280, 720, "PREFIXSUM", NULL, NULL);
+    window = glfwCreateWindow (1280, 720, "GPUALG", NULL, NULL);
     if (window == NULL)
         throw std::runtime_error ("Cannot open window.");
     glfwMakeContextCurrent (window);
 
-		gl::Init ((gl::GetProcAddressCallback) glfwGetProcAddress);
+    gl::Init ((gl::GetProcAddressCallback) glfwGetProcAddress);
 
-		prefixsum = new PrefixSum ();
+    const std::unordered_map<std::string, std::function<GpuAlg*(void)>> algos = {
+    		{ "prefixsum", [] { return new PrefixSum (); } },
+    		{ "radixsort", [] { return new RadixSort (); } }
+    };
+
+    if (argc > 2)
+    	throw std::runtime_error ("Usage: gpualg [algorithm]");
+    std::string algo = (argc > 1) ? argv[1] : "prefixsum";
+    auto it = algos.find (algo);
+    if (it == algos.end ())
+    	throw std::runtime_error ("Invalid algorithm");
+
+	gpualg = it->second ();
 }
 
 void cleanup (void)
 {
-	if (prefixsum != NULL)
-		 delete prefixsum;
+	if (gpualg != NULL)
+		 delete gpualg;
 	if (window != NULL)
 		 glfwDestroyWindow (window);
 	glfwTerminate ();
 }
-
 
 int main (int argc, char *argv[])
 {
@@ -43,17 +53,8 @@ int main (int argc, char *argv[])
 	}
 
 	try {
-		initialize ();
-
-		prefixsum->Run ();
-
-		while (!glfwWindowShouldClose (window))
-		{
-			prefixsum->Frame ();
-			glfwSwapBuffers (window);
-			glfwPollEvents ();
-		}
-
+		initialize (argc, argv);
+		gpualg->Run ();
 		cleanup ();
 		return 0;
 	} catch (std::exception &e) {

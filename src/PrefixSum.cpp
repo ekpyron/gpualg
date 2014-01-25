@@ -1,33 +1,15 @@
 #include "PrefixSum.h"
-#include <fstream>
-#include <iomanip>
-
-std::string LoadFile (const std::string &filename)
-{
-	std::ifstream in (filename, std::ios::in);
-	if (in)
-	{
-		std::vector<char> data;
-		in.seekg (0, std::ios::end);
-		data.resize (in.tellg ());
-		in.seekg (0, std::ios::beg);
-		in.read (&data[0], data.size ());
-		in.close ();
-		return std::string (data.begin (), data.end ());
-	}
-	throw std::runtime_error ("Could not read file.");
-}
 
 PrefixSum::PrefixSum (void)
 {
 	std::string src;
-	src = LoadFile ("shaders/blockscan.glsl");
+	src = LoadFile ("shaders/prefixsum/blockscan.glsl");
 	if (!blockscan.Create (GL_COMPUTE_SHADER, src))
 	{
 		throw std::runtime_error (std::string ("Cannot load shader: ") + blockscan.GetInfoLog ());
 	}
 
-	src = LoadFile ("shaders/addblocksum.glsl");
+	src = LoadFile ("shaders/prefixsum/addblocksum.glsl");
 	if (!addblocksum.Create (GL_COMPUTE_SHADER, src))
 	{
 		throw std::runtime_error (std::string ("Cannot load shader: ") + addblocksum.GetInfoLog ());
@@ -36,7 +18,7 @@ PrefixSum::PrefixSum (void)
 	std::vector<float> data;
 
 	for (int i = 0; i < 65536; i++)
-		data.push_back (i+1);
+		data.push_back (i);
 
 	buffer.Data (sizeof (float) * data.size (), &data[0], GL_STATIC_DRAW);
 	blocksums.Data (sizeof (float) * 256, NULL, GL_STATIC_DRAW);
@@ -72,7 +54,7 @@ void PrefixSum::Run (void)
 	{
 		for (int j = 0; j < 256; j++)
 		{
-			std::cout << std::setfill ('0') << std::setw (8) << uint32_t (data[i*256 + j]);
+			std::cout << std::setfill ('0') << std::setw (10) << uint32_t (data[i*256 + j]);
 			if (j < 255)
 				std::cout << " ";
 		}
@@ -81,8 +63,4 @@ void PrefixSum::Run (void)
 	std::cout << std::endl;
 	buffer.Unmap ();
 
-}
-
-void PrefixSum::Frame (void)
-{
 }
