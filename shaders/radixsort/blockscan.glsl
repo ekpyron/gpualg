@@ -1,6 +1,6 @@
-#version 430 core
+// header is included here
 
-layout (local_size_x = 128) in;
+layout (local_size_x = HALFBLOCKSIZE) in;
 
 layout (std430, binding = 2) buffer Data
 {
@@ -12,9 +12,9 @@ layout (std430, binding = 3) buffer BlockSums
 	uint blocksums[];
 };
 
-shared uint temp[256];
+shared uint temp[BLOCKSIZE];
 
-const int n = 256;
+const int n = BLOCKSIZE;
 
 void main (void)
 {

@@ -1,6 +1,6 @@
-#version 430 core
+// header is included here
 
-layout (local_size_x = 128) in;
+layout (local_size_x = HALFBLOCKSIZE) in;
 
 layout (std430, binding = 0) buffer Data
 {
@@ -19,10 +19,10 @@ layout (std430, binding = 2) buffer BlockSum
 
 uniform uvec4 blocksumoffsets;
 
-shared uvec4 mask[256];
+shared uvec4 mask[BLOCKSIZE];
 shared uvec4 sblocksum;
 
-const int n = 256;
+const int n = BLOCKSIZE;
 
 const uvec4 bitmask[4] = {
 	uvec4 (1, 0, 0, 0),
@@ -100,8 +100,8 @@ void main (void)
 	barrier ();
 	memoryBarrierShared ();
 
-	uint o1 = 256 * gl_WorkGroupID.x + mask[2 * lid][bits1] + sblocksum[bits1];
-	uint o2 = 256 * gl_WorkGroupID.x + mask[2 * lid + 1][bits2] + sblocksum[bits2];
+	uint o1 = BLOCKSIZE * gl_WorkGroupID.x + mask[2 * lid][bits1] + sblocksum[bits1];
+	uint o2 = BLOCKSIZE * gl_WorkGroupID.x + mask[2 * lid + 1][bits2] + sblocksum[bits2];
 
 	prefixsum[o1] = mask[2 * lid][bits1];
 	prefixsum[o2] = mask[2 * lid + 1][bits2];

@@ -19,6 +19,9 @@ private:
 	 gl::Buffer blocksums;
 	 gl::Buffer blocksumsums;
 	 gl::Buffer result;
+
+	 uint32_t blocksize;
+	 uint32_t numblocks;
 };
 
 #endif /* !defined RADIXSORT_H */
