@@ -2,12 +2,12 @@
 
 layout (local_size_x = 128) in;
 
-layout (std430, binding = 6) buffer Data
+layout (std430, binding = 2) buffer Data
 {
 	uint data[];
 };
 
-layout (std430, binding = 7) buffer BlockSums
+layout (std430, binding = 3) buffer BlockSums
 {
 	uint blocksums[];
 };

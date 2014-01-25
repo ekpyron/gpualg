@@ -13,10 +13,12 @@ public:
 private:
 	 gl::Program counting;
 	 gl::Program blockscan;
+	 gl::Program globalsort;
 	 gl::Buffer buffer;
 	 gl::Buffer prefixsums;
 	 gl::Buffer blocksums;
 	 gl::Buffer blocksumsums;
+	 gl::Buffer result;
 };
 
 #endif /* !defined RADIXSORT_H */
