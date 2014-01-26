@@ -16,3 +16,19 @@ std::string LoadFile (const std::string &filename)
 	}
 	throw std::runtime_error ("Could not read file.");
 }
+
+GLuint LoadShaderProgram (GLenum type, const std::string &src)
+{
+	const char *s = src.c_str ();
+	GLuint program = glCreateShaderProgramv (type, 1, &s);
+	if (program == 0)
+	{
+		GLint len;
+		glGetProgramiv (program, GL_INFO_LOG_LENGTH, &len);
+		std::vector<char> data;
+		data.resize (len);
+		glGetProgramInfoLog (program, len, NULL, &data[0]);
+		throw std::runtime_error (std::string (&data[0], len));
+	}
+	return program;
+}

@@ -4,52 +4,54 @@ PrefixSum::PrefixSum (void)
 {
 	std::string src;
 	src = LoadFile ("shaders/prefixsum/blockscan.glsl");
-	if (!blockscan.Create (GL_COMPUTE_SHADER, src))
-	{
-		throw std::runtime_error (std::string ("Cannot load shader: ") + blockscan.GetInfoLog ());
-	}
+	blockscan = LoadShaderProgram (GL_COMPUTE_SHADER, src);
 
 	src = LoadFile ("shaders/prefixsum/addblocksum.glsl");
-	if (!addblocksum.Create (GL_COMPUTE_SHADER, src))
-	{
-		throw std::runtime_error (std::string ("Cannot load shader: ") + addblocksum.GetInfoLog ());
-	}
+	addblocksum = LoadShaderProgram (GL_COMPUTE_SHADER, src);
 
 	std::vector<float> data;
 
 	for (int i = 0; i < 65536; i++)
 		data.push_back (i);
 
-	buffer.Data (sizeof (float) * data.size (), &data[0], GL_STATIC_DRAW);
-	blocksums.Data (sizeof (float) * 256, NULL, GL_STATIC_DRAW);
-	unused.Data (sizeof (float), NULL, GL_STATIC_DRAW);
+	glGenBuffers (3, buffers);
+	glBindBuffer (GL_SHADER_STORAGE_BUFFER, buffer);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * data.size (), &data[0], GL_STATIC_DRAW);
+	glBindBuffer (GL_SHADER_STORAGE_BUFFER, blocksums);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * 256, NULL, GL_STATIC_DRAW);
+	glBindBuffer (GL_SHADER_STORAGE_BUFFER, unused);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float), NULL, GL_STATIC_DRAW);
 }
 
 PrefixSum::~PrefixSum (void)
 {
+	glDeleteBuffers (3, buffers);
+	for (int i = 0; i < 2; i++)
+		glDeleteProgram (programs[i]);
 }
 
 void PrefixSum::Run (void)
 {
-	blockscan.Use ();
+	glUseProgram (blockscan);
 
-	buffer.BindBase (GL_SHADER_STORAGE_BUFFER, 0);
-	blocksums.BindBase (GL_SHADER_STORAGE_BUFFER, 1);
-	gl::DispatchCompute (256, 1, 1);
-	gl::MemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, buffer);
+	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, blocksums);
+	glDispatchCompute (256, 1, 1);
+	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
-	blocksums.BindBase (GL_SHADER_STORAGE_BUFFER, 0);
-	unused.BindBase (GL_SHADER_STORAGE_BUFFER, 1);
-	gl::DispatchCompute (256, 1, 1);
-	gl::MemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, blocksums);
+	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, unused);
+	glDispatchCompute (256, 1, 1);
+	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
-	buffer.BindBase (GL_SHADER_STORAGE_BUFFER, 0);
-	blocksums.BindBase (GL_SHADER_STORAGE_BUFFER, 1);
-	addblocksum.Use ();
-	gl::DispatchCompute (256, 1, 1);
-	gl::MemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, buffer);
+	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, blocksums);
+	glUseProgram (addblocksum);
+	glDispatchCompute (256, 1, 1);
+	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
-	float *data = reinterpret_cast<float*> (buffer.Map (GL_READ_ONLY));
+	glBindBuffer (GL_SHADER_STORAGE_BUFFER, buffer);
+	float *data = reinterpret_cast<float*> (glMapBuffer (GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY));
 	for (int i = 0; i < 256; i++)
 	{
 		for (int j = 0; j < 256; j++)
@@ -61,6 +63,5 @@ void PrefixSum::Run (void)
 		std::cout << std::endl;
 	}
 	std::cout << std::endl;
-	buffer.Unmap ();
-
+	glUnmapBuffer (GL_SHADER_STORAGE_BUFFER);
 }

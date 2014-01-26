@@ -11,14 +11,24 @@ public:
 	 virtual ~RadixSort (void);
 	 virtual void Run (void);
 private:
-	 gl::Program counting;
-	 gl::Program blockscan;
-	 gl::Program globalsort;
-	 gl::Buffer buffer;
-	 gl::Buffer prefixsums;
-	 gl::Buffer blocksums;
-	 gl::Buffer blocksumsums;
-	 gl::Buffer result;
+	 union {
+		 struct {
+			 GLuint counting;
+			 GLuint blockscan;
+			 GLuint globalsort;
+			 GLuint addblocksum;
+		 };
+		 GLuint programs[4];
+	 };
+	 union {
+		 struct {
+			 GLuint buffer;
+			 GLuint prefixsums;
+			 GLuint result;
+		 };
+		 GLuint buffers[3];
+	 };
+	 std::vector<GLuint> blocksums;
 
 	 uint32_t blocksize;
 	 uint32_t numblocks;

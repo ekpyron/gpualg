@@ -11,11 +11,21 @@ public:
 	 virtual ~PrefixSum (void);
 	 virtual void Run (void);
 private:
-	 gl::Program blockscan;
-	 gl::Program addblocksum;
-	 gl::Buffer buffer;
-	 gl::Buffer blocksums;
-	 gl::Buffer unused;
+	 union {
+		 struct {
+			 GLuint blockscan;
+			 GLuint addblocksum;
+		 };
+		 GLuint programs[2];
+	 };
+	 union {
+		 struct {
+			 GLuint buffer;
+			 GLuint blocksums;
+			 GLuint unused;
+		 };
+		 GLuint buffers[3];
+	 };
 };
 
 #endif /* !defined PREFIXSUM_H */

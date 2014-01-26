@@ -17,7 +17,7 @@ layout (std430, binding = 2) buffer BlockSum
 	uint blocksum[];
 };
 
-layout (std430, binding = 4) buffer Result
+layout (std430, binding = 3) buffer Result
 {
 	uint result[];
 };

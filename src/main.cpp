@@ -7,6 +7,18 @@ GpuAlg *gpualg = NULL;
 
 void initialize (int &argc, char **&argv)
 {
+    const std::unordered_map<std::string, std::function<GpuAlg*(void)>> algos = {
+    		{ "prefixsum", [] { return new PrefixSum (); } },
+    		{ "radixsort", [] { return new RadixSort (); } }
+    };
+
+    if (argc > 2)
+    	throw std::runtime_error ("Usage: gpualg [algorithm]");
+    std::string algoname = (argc > 1) ? argv[1] : "prefixsum";
+    auto algo = algos.find (algoname);
+    if (algo == algos.end ())
+    	throw std::runtime_error ("Invalid algorithm");
+
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -18,21 +30,12 @@ void initialize (int &argc, char **&argv)
         throw std::runtime_error ("Cannot open window.");
     glfwMakeContextCurrent (window);
 
-    gl::Init ((gl::GetProcAddressCallback) glfwGetProcAddress);
+    glewExperimental = true;
+    if (glewInit () != GLEW_OK)
+    	throw std::runtime_error ("Cannot initialize GLEW.");
+    glGetError ();
 
-    const std::unordered_map<std::string, std::function<GpuAlg*(void)>> algos = {
-    		{ "prefixsum", [] { return new PrefixSum (); } },
-    		{ "radixsort", [] { return new RadixSort (); } }
-    };
-
-    if (argc > 2)
-    	throw std::runtime_error ("Usage: gpualg [algorithm]");
-    std::string algo = (argc > 1) ? argv[1] : "prefixsum";
-    auto it = algos.find (algo);
-    if (it == algos.end ())
-    	throw std::runtime_error ("Invalid algorithm");
-
-	gpualg = it->second ();
+	gpualg = algo->second ();
 }
 
 void cleanup (void)

@@ -2,12 +2,12 @@
 
 layout (local_size_x = HALFBLOCKSIZE) in;
 
-layout (std430, binding = 2) buffer Data
+layout (std430, binding = 0) buffer Data
 {
 	uint data[];
 };
 
-layout (std430, binding = 3) buffer BlockSums
+layout (std430, binding = 1) buffer BlockSums
 {
 	uint blocksums[];
 };
