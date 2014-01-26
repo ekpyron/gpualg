@@ -33,5 +33,5 @@ void main (void)
 	uint d = data[gid];
 	uint bits = d & 3;
 	
-	result[blocksum[blocksumoffsets[d] + gl_WorkGroupID.x] + prefixsum[gid]] = data[gid];
+	result[blocksum[blocksumoffsets[bits] + gl_WorkGroupID.x] + prefixsum[gid]] = data[gid];
 }
