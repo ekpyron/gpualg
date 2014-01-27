@@ -7,7 +7,7 @@ layout (std430, binding = 0) buffer Data
 	uint data[];
 };
 
-layout (std430, binding = 1) buffer BlockSums
+layout (std430, binding = 1) writeonly buffer BlockSums
 {
 	uint blocksums[];
 };

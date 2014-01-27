@@ -2,28 +2,29 @@
 
 layout (local_size_x = BLOCKSIZE) in;
 
-layout (std430, binding = 0) buffer Data
+layout (std430, binding = 0) readonly buffer Data
 {
 	uint data[];
 };
 
-layout (std430, binding = 1) buffer PrefixSum
+layout (std430, binding = 1) readonly buffer PrefixSum
 {
 	uint prefixsum[];
 };
 
-layout (std430, binding = 2) buffer BlockSum
+layout (std430, binding = 2) readonly buffer BlockSum
 {
 	uint blocksum[];
 };
 
-layout (std430, binding = 3) buffer Result
+layout (std430, binding = 3) writeonly buffer Result
 {
 	uint result[];
 };
 
 uniform uvec4 blocksumoffsets;
 
+uniform int bitshift;
 
 void main (void)
 {
@@ -31,7 +32,7 @@ void main (void)
 	const int lid = int (gl_LocalInvocationIndex);
 
 	uint d = data[gid];
-	uint bits = d & 3;
+	uint bits = (d & (3 << bitshift)) >> bitshift;
 	
 	result[blocksum[blocksumoffsets[bits] + gl_WorkGroupID.x] + prefixsum[gid]] = data[gid];
 }

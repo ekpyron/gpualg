@@ -2,17 +2,17 @@
 
 layout (local_size_x = HALFBLOCKSIZE) in;
 
-layout (std430, binding = 0) buffer Data
+layout (std430, binding = 0) readonly buffer Data
 {
 	uint data[];
 };
 
-layout (std430, binding = 1) buffer PrefixSum
+layout (std430, binding = 1) writeonly buffer PrefixSum
 {
 	uint prefixsum[];
 };
 
-layout (std430, binding = 2) buffer BlockSum
+layout (std430, binding = 2) writeonly buffer BlockSum
 {
 	uint blocksum[];
 };
@@ -24,12 +24,9 @@ shared uvec4 sblocksum;
 
 const int n = BLOCKSIZE;
 
-const uvec4 bitmask[4] = {
-	uvec4 (1, 0, 0, 0),
-	uvec4 (0, 1, 0, 0),
-	uvec4 (0, 0, 1, 0),
-	uvec4 (0, 0, 0, 1)
-};
+uniform int bitshift;
+
+#define DONT_SHUFFLE
 
 void main (void)
 {
@@ -38,8 +35,8 @@ void main (void)
 	
 	uint data1 = data[2 * gid];
 	uint data2 = data[2 * gid + 1];
-	uint bits1 = data1 & 3;
-	uint bits2 = data2 & 3;
+	uint bits1 = (data1 & (3 << bitshift)) >> bitshift;
+	uint bits2 = (data2 & (3 << bitshift)) >> bitshift;
 	mask[2 * lid] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 	mask[2 * lid + 1] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 
@@ -99,7 +96,11 @@ void main (void)
 	
 	barrier ();
 	memoryBarrierShared ();
-
+	
+#ifdef DONT_SHUFFLE
+	prefixsum[2 * gid] = mask[2 * lid][bits1];
+	prefixsum[2 * gid + 1] = mask[2 * lid + 1][bits2];
+#else
 	uint o1 = BLOCKSIZE * gl_WorkGroupID.x + mask[2 * lid][bits1] + sblocksum[bits1];
 	uint o2 = BLOCKSIZE * gl_WorkGroupID.x + mask[2 * lid + 1][bits2] + sblocksum[bits2];
 
@@ -108,4 +109,5 @@ void main (void)
 
 	data[o1] = data1;
 	data[o2] = data2;
+#endif
 }
