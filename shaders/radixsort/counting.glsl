@@ -4,7 +4,7 @@ layout (local_size_x = HALFBLOCKSIZE) in;
 
 layout (std430, binding = 0) readonly buffer Data
 {
-	uint data[];
+	uvec4 data[];
 };
 
 layout (std430, binding = 1) writeonly buffer PrefixSum
@@ -33,10 +33,10 @@ void main (void)
 	const int gid = int (gl_GlobalInvocationID.x);
 	const int lid = int (gl_LocalInvocationIndex);
 	
-	uint data1 = data[2 * gid];
-	uint data2 = data[2 * gid + 1];
-	uint bits1 = (data1 & (3 << bitshift)) >> bitshift;
-	uint bits2 = (data2 & (3 << bitshift)) >> bitshift;
+	uvec4 data1 = data[2 * gid];
+	uvec4 data2 = data[2 * gid + 1];
+	uint bits1 = (data1.x & (3 << bitshift)) >> bitshift;
+	uint bits2 = (data2.x & (3 << bitshift)) >> bitshift;
 	mask[2 * lid] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 	mask[2 * lid + 1] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 

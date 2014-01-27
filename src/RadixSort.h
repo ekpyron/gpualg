@@ -11,6 +11,8 @@ public:
 	 virtual ~RadixSort (void);
 	 virtual void Run (void);
 private:
+	 void SortBits (int bits);
+	 void Check (void);
 	 union {
 		 struct {
 			 GLuint counting;
@@ -32,6 +34,12 @@ private:
 
 	 uint32_t blocksize;
 	 uint32_t numblocks;
+	 int counting_bitshift;
+	 int globalsort_bitshift;
+
+	 GLuint query;
+
+	 std::vector<glm::uvec4> data;
 };
 
 #endif /* !defined RADIXSORT_H */
