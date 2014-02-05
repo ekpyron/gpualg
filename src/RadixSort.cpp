@@ -2,7 +2,7 @@
 #include <random>
 
 RadixSort::RadixSort (void)
-	: blocksize (512), numblocks (32768)
+	: blocksize (256), numblocks (32)
 {
 	std::stringstream header;
 	std::string src;
@@ -23,7 +23,7 @@ RadixSort::RadixSort (void)
 	srand (42);
 	for (int i = 0; i < blocksize * numblocks; i++)
 	{
-		data.push_back (glm::uvec4 (i, rand (), 0, 1));
+		data.push_back (glm::uvec4 (i, rand (), 0, 0));
 	}
 	std::random_device rd;
 	std::mt19937 g (rd());
@@ -32,9 +32,9 @@ RadixSort::RadixSort (void)
 	glGenBuffers (3, buffers);
 
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, buffer);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::uvec4) * data.size (), &data[0], GL_STATIC_DRAW);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::uvec4) * data.size (), &data[0], GL_DYNAMIC_DRAW);
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, prefixsums);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * data.size (), NULL, GL_STATIC_DRAW);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * 4 * data.size (), NULL, GL_DYNAMIC_DRAW);
 
 	uint32_t numblocksums = 4 * numblocks;
 	{
@@ -49,18 +49,15 @@ RadixSort::RadixSort (void)
 		numblocksums = ((numblocksums + blocksize - 1) / blocksize) * blocksize;
 		if (numblocksums < 1)
 			numblocksums = 1;
-		glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * numblocksums, NULL, GL_STATIC_DRAW);
+		glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (uint32_t) * numblocksums, NULL, GL_DYNAMIC_DRAW);
 		numblocksums /= blocksize;
 	}
 
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, result);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::uvec4) * data.size (), NULL, GL_STATIC_DRAW);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::uvec4) * data.size (), NULL, GL_DYNAMIC_DRAW);
 
-	glm::uvec4 blocksumoffsets (0, numblocks, numblocks * 2, numblocks * 3);
-	glProgramUniform4uiv (counting, glGetUniformLocation (counting, "blocksumoffsets"), 1,
-			glm::value_ptr (blocksumoffsets));
-	glProgramUniform4uiv (globalsort, glGetUniformLocation (globalsort, "blocksumoffsets"), 1,
-			glm::value_ptr (blocksumoffsets));
+	glProgramUniform1ui (counting, glGetUniformLocation (counting, "numblocks"), numblocks);
+	glProgramUniform1ui (globalsort, glGetUniformLocation (globalsort, "numblocks"), numblocks);
 
 	counting_bitshift = glGetUniformLocation (counting, "bitshift");
 	globalsort_bitshift = glGetUniformLocation (globalsort, "bitshift");
@@ -151,6 +148,7 @@ uint32_t intpow (uint32_t x, uint32_t y)
 
 void RadixSort::SortBits (int bits)
 {
+	glUseProgram (counting);
 	glProgramUniform1i (counting, counting_bitshift, bits);
 	glProgramUniform1i (globalsort, globalsort_bitshift, bits);
 
@@ -159,10 +157,9 @@ void RadixSort::SortBits (int bits)
 	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, blocksums.front ());
 	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, result);
 
-	glUseProgram (counting);
 	glDispatchCompute (numblocks, 1, 1);
 	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
-
+	
 	glUseProgram (blockscan);
 	uint32_t numblocksums = (4 * numblocks) / blocksize;
 	for (int i = 0; i < blocksums.size () - 1; i++)

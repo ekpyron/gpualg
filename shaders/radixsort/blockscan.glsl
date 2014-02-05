@@ -4,12 +4,12 @@ layout (local_size_x = HALFBLOCKSIZE) in;
 
 layout (std430, binding = 0) buffer Data
 {
-	uint data[];
+	uvec4 data[];
 };
 
 layout (std430, binding = 1) writeonly buffer BlockSums
 {
-	uint blocksums[];
+	uvec4 blocksums[];
 };
 
 shared uint temp[BLOCKSIZE];
@@ -22,8 +22,8 @@ void main (void)
 	int lid = int (gl_LocalInvocationIndex);
 	int offset = 1;
 	
-	temp[2 * lid] = data[2 * gid];
-	temp[2 * lid + 1] = data[2 * gid + 1];
+	temp[2 * lid] = data[2 * gid].x;
+	temp[2 * lid + 1] = data[2 * gid + 1].x;
 	
 	for (int d = n >> 1; d > 0; d >>= 1)
 	{
@@ -42,7 +42,7 @@ void main (void)
 	
 	if (lid == 0)
 	{
-		blocksums[gl_WorkGroupID.x] = temp[n - 1];
+		blocksums[gl_WorkGroupID.x] = uvec4 (temp[n - 1], 0, 0, 0);
 		temp[n - 1] = 0;
 	}
 	
@@ -66,6 +66,6 @@ void main (void)
 	barrier ();
 	memoryBarrierShared ();
 	
-	data[2 * gid] = temp[2 * lid];
-	data[2 * gid + 1] = temp[2 * lid + 1];
+	data[2 * gid].x = temp[2 * lid];
+	data[2 * gid + 1].x = temp[2 * lid + 1];
 }

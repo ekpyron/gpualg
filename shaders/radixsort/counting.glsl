@@ -2,31 +2,29 @@
 
 layout (local_size_x = HALFBLOCKSIZE) in;
 
-layout (std430, binding = 0) readonly buffer Data
+layout (std430, binding = 0) buffer Data
 {
 	uvec4 data[];
 };
 
-layout (std430, binding = 1) writeonly buffer PrefixSum
+layout (std430, binding = 1) buffer Test
 {
-	uint prefixsum[];
+	uvec4 prefixsum[];
 };
 
-layout (std430, binding = 2) writeonly buffer BlockSum
+layout (std430, binding = 2) buffer BlockSum
 {
-	uint blocksum[];
+	uvec4 blocksum[];
 };
 
-uniform uvec4 blocksumoffsets;
+uniform uint numblocks;
 
-shared uvec4 mask[BLOCKSIZE];
+shared uint mask[BLOCKSIZE * 4];
 shared uvec4 sblocksum;
 
 const int n = BLOCKSIZE;
 
 uniform int bitshift;
-
-#define DONT_SHUFFLE
 
 void main (void)
 {
@@ -37,8 +35,29 @@ void main (void)
 	uvec4 data2 = data[2 * gid + 1];
 	uint bits1 = (data1.x & (3 << bitshift)) >> bitshift;
 	uint bits2 = (data2.x & (3 << bitshift)) >> bitshift;
-	mask[2 * lid] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
-	mask[2 * lid + 1] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
+	
+	for (int i = 0; i < 4; i++)
+	{
+		if (bits1 == i)
+		{
+			mask[4 * 2 * lid + i] = 1;
+		}
+		else
+		{
+			mask[4 * 2 * lid + i] = 0;
+		}
+		if (bits2 == i)
+		{
+			mask[4 * (2 * lid + 1) + i] = 1;
+		}
+		else
+		{
+			mask[4 * (2 * lid + 1) + i] = 0;
+		}
+	}
+	
+	memoryBarrierShared ();
+	
 
 	int offset = 1;	
 	for (int d = n >> 1; d > 0; d >>= 1)
@@ -51,7 +70,8 @@ void main (void)
 			int ai = offset * (2 * lid + 1) - 1;
 			int bi = offset * (2 * lid + 2) - 1;
 
-			mask[bi] += mask[ai];
+			for (int i = 0; i < 4; i++)
+				mask[4*bi+i] += mask[4*ai+i];
 		}
 		offset *= 2;
 	}
@@ -63,19 +83,17 @@ void main (void)
 	{
 		uvec4 tmp;
 		tmp.x = 0;
-		tmp.y = mask[n - 1].x;
-		tmp.z = tmp.y + mask[n - 1].y;
-		tmp.w = tmp.z + mask[n - 1].z;
+		tmp.y = mask[4* (n - 1)];
+		tmp.z = tmp.y + mask[4*(n - 1)+1];
+		tmp.w = tmp.z + mask[4*(n - 1)+2];
 		sblocksum = tmp;
 
 		for (int i = 0; i < 4; i++)
 		{
-			blocksum[blocksumoffsets[i] + gl_WorkGroupID.x] = mask[n - 1][i];
+			blocksum[numblocks * i + gl_WorkGroupID.x] = uvec4 (mask[4*(n - 1)+i], 0, 0, 0);
+			mask[4 * (n - 1) + i] = 0;
 		}
-
-		mask[n - 1] = uvec4 (0, 0, 0, 0);
 	}
-	
 	
 	for (int d = 1; d < n; d *= 2)
 	{
@@ -88,26 +106,18 @@ void main (void)
 			int ai = offset * (2 * lid + 1) - 1;
 			int bi = offset * (2 * lid + 2) - 1;
 			
-			uvec4 tmp = mask[ai];
-			mask[ai] = mask[bi];
-			mask[bi] += tmp;
+			for (int i = 0; i < 4; i++)
+			{
+				uint tmp = mask[4*ai+i];
+				mask[4*ai+i] = mask[4*bi+i];
+				mask[4*bi+i] += tmp;
+			}
 		}
 	}
 	
 	barrier ();
 	memoryBarrierShared ();
 	
-#ifdef DONT_SHUFFLE
-	prefixsum[2 * gid] = mask[2 * lid][bits1];
-	prefixsum[2 * gid + 1] = mask[2 * lid + 1][bits2];
-#else
-	uint o1 = BLOCKSIZE * gl_WorkGroupID.x + mask[2 * lid][bits1] + sblocksum[bits1];
-	uint o2 = BLOCKSIZE * gl_WorkGroupID.x + mask[2 * lid + 1][bits2] + sblocksum[bits2];
-
-	prefixsum[o1] = mask[2 * lid][bits1];
-	prefixsum[o2] = mask[2 * lid + 1][bits2];
-
-	data[o1] = data1;
-	data[o2] = data2;
-#endif
+	prefixsum[2 * gid] = uvec4 (mask[4 * 2 * lid + bits1], 42, 42, 42);
+	prefixsum[2 * gid + 1] = uvec4 (mask[4 * (2 * lid + 1) + bits2], 84, 84, 84);
 }

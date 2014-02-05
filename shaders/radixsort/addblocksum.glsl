@@ -4,12 +4,12 @@ layout (local_size_x = BLOCKSIZE) in;
 
 layout (std430, binding = 0) buffer Data
 {
-	uint data[];
+	uvec4 data[];
 };
 
 layout (std430, binding = 1) readonly buffer BlockSums
 {
-	uint blocksums[];
+	uvec4 blocksums[];
 };
 
 void main (void)

@@ -11,6 +11,7 @@ std::string LoadFile (const std::string &filename)
 		data.resize (in.tellg ());
 		in.seekg (0, std::ios::beg);
 		in.read (&data[0], data.size ());
+		data.resize (in.gcount ());
 		in.close ();
 		return std::string (data.begin (), data.end ());
 	}
