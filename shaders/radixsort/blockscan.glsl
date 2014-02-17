@@ -19,7 +19,7 @@ const int n = BLOCKSIZE;
 void main (void)
 {
 	int gid = int (gl_GlobalInvocationID.x);
-	int lid = int (gl_LocalInvocationIndex);
+	int lid = int (gl_LocalInvocationID.x);
 	int offset = 1;
 	
 	temp[2 * lid] = data[2 * gid];
